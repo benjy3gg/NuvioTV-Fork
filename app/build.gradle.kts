@@ -94,6 +94,11 @@ if (gradle.startParameter.taskNames.any { it.contains("release", ignoreCase = tr
 val enableAmlFelNative = resolveProperty(devProperties, localProperties, "AML_FEL_NATIVE_ENABLED", "true").let(::parseBooleanProperty)
 // Fire TV Cube 3 (Gazelle) FEL: libnuvio_dvfel JNI shim over the prebuilt jniLibs/armeabi-v7a/libdvfelplay.so.
 val enableDvfelGazelle = resolveProperty(devProperties, localProperties, "DVFEL_GAZELLE_ENABLED", "true").let(::parseBooleanProperty)
+// ABIs to build APKs (and native code) for, comma-separated. Release builds keep both; set
+// NUVIO_ABIS=armeabi-v7a in local.dev.properties (or -PNUVIO_ABIS=...) for faster local builds.
+val apkAbis = (providers.gradleProperty("NUVIO_ABIS").orNull
+    ?: resolveProperty(devProperties, localProperties, "NUVIO_ABIS", "armeabi-v7a,arm64-v8a"))
+    .split(',').map { it.trim() }.filter { it.isNotEmpty() }
 val doviStaticLibPath = resolveProperty(devProperties, localProperties, "DOVI_LIBDOVI_STATIC_LIB")
 val doviIncludeDirPath = resolveProperty(devProperties, localProperties, "DOVI_LIBDOVI_INCLUDE_DIR")
 val doviPrebuiltRootPath = resolveProperty(devProperties, localProperties, "DOVI_LIBDOVI_PREBUILT_ROOT")
@@ -316,7 +321,7 @@ android {
         abi {
             isEnable = !buildingAppBundle
             reset()
-            include("armeabi-v7a", "arm64-v8a")
+            include(*apkAbis.toTypedArray())
             isUniversalApk = false
         }
     }
