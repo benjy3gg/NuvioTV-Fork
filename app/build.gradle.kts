@@ -92,6 +92,8 @@ if (gradle.startParameter.taskNames.any { it.contains("release", ignoreCase = tr
     }
 }
 val enableAmlFelNative = resolveProperty(devProperties, localProperties, "AML_FEL_NATIVE_ENABLED", "true").let(::parseBooleanProperty)
+// Fire TV Cube 3 (Gazelle) FEL: libnuvio_dvfel JNI shim over the prebuilt jniLibs/armeabi-v7a/libdvfelplay.so.
+val enableDvfelGazelle = resolveProperty(devProperties, localProperties, "DVFEL_GAZELLE_ENABLED", "true").let(::parseBooleanProperty)
 val doviStaticLibPath = resolveProperty(devProperties, localProperties, "DOVI_LIBDOVI_STATIC_LIB")
 val doviIncludeDirPath = resolveProperty(devProperties, localProperties, "DOVI_LIBDOVI_INCLUDE_DIR")
 val doviPrebuiltRootPath = resolveProperty(devProperties, localProperties, "DOVI_LIBDOVI_PREBUILT_ROOT")
@@ -163,7 +165,8 @@ android {
         buildConfigField("boolean", "DOVI_NATIVE_ENABLED", enableDoviNative.toString())
         buildConfigField("boolean", "DOVI_EXTRACTOR_HOOK_READY", doviExtractorHookReady.toString())
         buildConfigField("boolean", "AML_FEL_NATIVE_ENABLED", enableAmlFelNative.toString())
-        // libnuviothumb is always built; dovi_bridge and aml_fel only when enabled.
+        buildConfigField("boolean", "DVFEL_GAZELLE_ENABLED", enableDvfelGazelle.toString())
+        // libnuviothumb is always built; dovi_bridge, aml_fel and nuvio_dvfel only when enabled.
         externalNativeBuild {
             cmake {
                 arguments(
@@ -171,11 +174,12 @@ android {
                 )
             }
         }
-        if (enableDoviNative || enableAmlFelNative) {
+        if (enableDoviNative || enableAmlFelNative || enableDvfelGazelle) {
             externalNativeBuild {
                 cmake {
                     arguments(
                         "-DAML_FEL_NATIVE_ENABLED=${if (enableAmlFelNative) "ON" else "OFF"}",
+                        "-DDVFEL_GAZELLE_ENABLED=${if (enableDvfelGazelle) "ON" else "OFF"}",
                         "-DDOVI_ENABLE_LIBDOVI=${if (doviEnableRealLink) "ON" else "OFF"}",
                         "-DDOVI_LIBDOVI_STATIC_LIB=${cmakePath(doviStaticLibPath)}",
                         "-DDOVI_LIBDOVI_INCLUDE_DIR=${cmakePath(doviIncludeDirPath)}",
