@@ -550,6 +550,8 @@ class PlayerViewModel @Inject constructor(
             )
             rows += StatsRow("DV", text)
         }
+        // Fire TV Cube 3 FEL: the enhancement layer state, how well it pairs, decoder and kernel counters.
+        if (dvDiag.dv7ModeEffective == "NATIVE_FEL_CUBE3") rows += gazelleFelStatsRows()
 
         // DV source mastering metadata (static per stream), read from the
         // RPU. Gated on its own value rather than the DV-conversion line above,
@@ -586,18 +588,7 @@ class PlayerViewModel @Inject constructor(
                 nativeFel = PlaybackStatsDv.isNativeFelMode(dvDiag.dv7ModeEffective)
             )?.let { rows += StatsRow("Format", it, marquee = it.length > 46) }
         }
-        // Fire TV Cube 3 FEL: whether EL pictures arrive and pair (the kernel composes, so "composed" stays 0).
-        if (dvDiag.dv7ModeEffective == "NATIVE_FEL_CUBE3" && com.nuvio.tv.core.player.dvfel.GazelleFelState.isFelRunning) {
-            PlaybackStatsDv.gazelleElRows(com.nuvio.tv.core.player.dvfel.GazelleFelState.stats)?.let { (decoded, drops) ->
-                rows += StatsRow("EL", decoded)
-                rows += StatsRow("EL drops", drops, marquee = drops.length > 40)
-            }
-            val versions = "dvfel ${com.nuvio.tv.core.player.dvfel.GazelleFelSupport.moduleVersion() ?: "?"} · " +
-                "lib ${com.nuvio.tv.core.player.dvfel.DvFelPlay.libVersion().ifEmpty { "?" }}"
-            rows += StatsRow("FEL helper", versions, marquee = versions.length > 40)
-        }
-
-        hud.videoDecoderName?.let { rows += StatsRow("Decoder", it) }
+        hud.videoDecoderName?.let { rows += StatsRow("Decoder", it, marquee = true) }
 
         val videoPresentation = sampleVideoPresentation()
         val tunnelled = videoPresentation.isTunnelled

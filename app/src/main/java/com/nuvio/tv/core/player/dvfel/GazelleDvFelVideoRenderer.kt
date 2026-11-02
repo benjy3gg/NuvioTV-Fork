@@ -64,6 +64,7 @@ internal class GazelleDvFelVideoRenderer(
 
     private val dropLate = dropLateFrames()
     private var framesSinceStats = 0
+    private val rpuStats = com.nuvio.tv.core.player.DvRendererRpuStats()
 
     override fun getName(): String = NAME
 
@@ -114,6 +115,8 @@ internal class GazelleDvFelVideoRenderer(
         val data = buffer.data ?: return
         if (buffer.isEncrypted) throw fallback("encrypted P7 is not supported")
         if (!session.isOpen) openSession(data)
+        // before the filter, on the original P7 RPU (the last NAL of the access unit)
+        rpuStats.sampleLiveDm(data, session.toCodecPts(buffer.timeUs))
         val n = session.filterAndCommit(data, buffer.timeUs)
         if (n < 0) throw fallback("dvfp_filter failed ($n)")
         data.limit(data.position() + n)
@@ -131,6 +134,16 @@ internal class GazelleDvFelVideoRenderer(
         if (!session.open(f.width, f.height, DvFelPlay.MODE_FEL, p.elType)) {
             throw fallback("dvfp_open(FEL) failed")
         }
+        recordFirstRpu(data)
+    }
+
+    /** The HUD's EL type and "DV HDR" row (MaxCLL/MaxFALL/MDL) from the first RPU. */
+    private fun recordFirstRpu(data: ByteBuffer) {
+        val length = data.remaining()
+        val bytes = ByteArray(length)
+        data.duplicate().get(bytes, 0, length)
+        val rpu = com.nuvio.tv.core.player.HevcDvRpuStripper.findRpuNalAnnexB(bytes, length) ?: return
+        rpuStats.recordFirstRpu(bytes, rpu.first, rpu.second, com.nuvio.tv.core.player.DoviBridge.EL_TYPE_FEL)
     }
 
     override fun onProcessedOutputBuffer(presentationTimeUs: Long) {

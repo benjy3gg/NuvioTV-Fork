@@ -42,7 +42,9 @@ data class StatsRow(
     val label: String,
     val value: String,
     val dot: StatsDot = StatsDot.NONE,
-    val marquee: Boolean = false
+    val marquee: Boolean = false,
+    /** Section override, for rows whose label does not name it (a multi-line entry's unlabelled lines). */
+    val group: StatsGroup? = null
 )
 
 /**
@@ -77,7 +79,7 @@ private val STATS_GROUP_BY_LABEL: Map<String, StatsGroup> = buildMap {
     put("Position", StatsGroup.PLAYBACK)
     listOf("Add-on", "Provider", "Server", "Source host", "File", "Size", "File bitrate")
         .forEach { put(it, StatsGroup.SOURCE) }
-    listOf("Video", "HDR", "V bitrate", "DV", "DV HDR", "DV CM", "DV levels", "DV L1", "DV L5", "Format",
+    listOf("Video", "HDR", "V bitrate", "DV", "FEL", "DV HDR", "DV CM", "DV levels", "DV L1", "DV L5", "Format",
         "Decoder", "Dropped", "Frame lead", "Display")
         .forEach { put(it, StatsGroup.VIDEO) }
     listOf("Audio", "A bitrate", "Underruns", "Route", "A jitter", "A filler", "A clock")
@@ -97,7 +99,7 @@ private val STATS_GROUP_BY_LABEL: Map<String, StatsGroup> = buildMap {
 internal fun buildStatsSections(rows: List<StatsRow>): List<StatsSection> {
     val presented = rows.filterNot { it.label in setOf("A bitrate", "Network reads", "Cache/local reads") }
         .map { if (it.label == "Mux bitrate") it.copy(label = "File bitrate") else it }
-    val byGroup = presented.groupBy { STATS_GROUP_BY_LABEL[it.label] ?: StatsGroup.SYSTEM }
+    val byGroup = presented.groupBy { it.group ?: STATS_GROUP_BY_LABEL[it.label] ?: StatsGroup.SYSTEM }
     return StatsGroup.values().mapNotNull { g -> byGroup[g]?.let { StatsSection(g, it) } }
 }
 

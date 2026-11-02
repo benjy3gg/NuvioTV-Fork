@@ -41,9 +41,44 @@ internal object GazelleFelControl {
         }
     }
 
+    /** One read of dvfel's debugfs counters (see [readKernelStats]). */
+    class KernelSample(val values: Map<String, Long>, val atMs: Long)
+
+    @Volatile private var kernelNow: KernelSample? = null
+    @Volatile private var kernelBefore: KernelSample? = null
+    @Volatile private var kernelReading = false
+    @Volatile private var kernelRetryAtMs = 0L
+
+    /**
+     * The latest and the previous kernel counter samples, for the stats HUD; never blocks. Starts a new
+     * read on the worker when the latest is older than a second (after a failed read, waits 30 s).
+     */
+    fun kernelSamples(): Pair<KernelSample?, KernelSample?> {
+        val now = android.os.SystemClock.elapsedRealtime()
+        if (!kernelReading && now >= kernelRetryAtMs && now - (kernelNow?.atMs ?: 0L) >= 900L) {
+            kernelReading = true
+            worker.execute {
+                try {
+                    val values = readKernelStats()
+                    if (values == null) {
+                        kernelRetryAtMs = android.os.SystemClock.elapsedRealtime() + 30_000L
+                    } else {
+                        kernelBefore = kernelNow
+                        kernelNow = KernelSample(values, android.os.SystemClock.elapsedRealtime())
+                    }
+                } finally {
+                    kernelReading = false
+                }
+            }
+        }
+        return kernelNow to kernelBefore
+    }
+
     /** The session ended: the next one starts with the EL on and the kernel as configured. */
     fun onSessionClosed() {
         GazelleFelState.elRequested = true
+        kernelNow = null
+        kernelBefore = null
         if (fallbackSet) worker.execute { writeFallback(false) }
     }
 

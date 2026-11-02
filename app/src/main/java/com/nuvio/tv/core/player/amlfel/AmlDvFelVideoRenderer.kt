@@ -79,9 +79,6 @@ internal class AmlDvFelVideoRenderer(
         private const val VPTS_POLL_MS = 250L
         /** No in-band RPU NAL at all within this many samples = not a single-track P7 stream: fall back. */
         private const val NO_RPU_FALLBACK_SAMPLES = 12
-        /** Backward search window for the trailing RPU NAL of a sample (HUD live rows). */
-        private const val DM_SCAN_MAX_BYTES = 256 * 1024
-        private const val DM_WRITER = DolbyVisionConversionStats.LIVE_DM_WRITER_RENDERER
         /**
          * Feed pacing. BL and EL are parsed out of one stream ring buffer by two decoders; filled to the brim
          * (write back-pressure only), both decoders stop for good on dense content (frame counts freeze, the display
@@ -154,7 +151,7 @@ internal class AmlDvFelVideoRenderer(
     private var elLabel = "P7"
     private var framingChecked = false
     private var probeScratch = ByteArray(0)
-    private var dmScratch = ByteArray(1024)
+    private val rpuStats = com.nuvio.tv.core.player.DvRendererRpuStats()
     private var lastVptsPollMs = 0L
     private var lastPolledVpts = -1L
     private var leadingCheck = false
@@ -366,7 +363,7 @@ internal class AmlDvFelVideoRenderer(
                         counters.skippedInputBufferCount++
                         continue
                     }
-                    sampleLiveDm(data, inputBuffer.timeUs - streamOffsetUs)
+                    rpuStats.sampleLiveDm(data, inputBuffer.timeUs - streamOffsetUs)
                     ensureSession()
                     val r = AmlFelNative.queueSample(handle, data, data.position(), length, toStreamPtsUs(inputBuffer.timeUs))
                     if (r < 0) throw failure("queue", r)
@@ -531,54 +528,6 @@ internal class AmlDvFelVideoRenderer(
             }
             else -> throw fallback("RPU is not profile 7")
         }
-    }
-
-    /**
-     * HUD live rows: every ~0.5 s of media, the RPU of the sample being fed is summarised (L1 scene light,
-     * L5 active area, CM version, levels) and stored by media time; the HUD shows the entry at the playback
-     * position (the feed runs up to [FEED_MAX_AHEAD_US] ahead). The RPU is the last NAL of a P7 access unit, so it
-     * is searched backwards from the end (at most [DM_SCAN_MAX_BYTES]); only the RPU bytes are copied.
-     */
-    private fun sampleLiveDm(data: ByteBuffer, mediaTimeUs: Long) {
-        if (!DoviBridge.isAvailable() || !dvStats.shouldSampleLiveDm(DM_WRITER, mediaTimeUs)) return
-        val start = data.position()
-        val end = data.limit()
-        val floor = maxOf(start, end - DM_SCAN_MAX_BYTES)
-        var nalBegin = -1
-        var i = end - 5
-        while (i >= floor) {
-            if (data.get(i + 3).toInt() == 0x7C && data.get(i + 2).toInt() == 1 &&
-                data.get(i + 1).toInt() == 0 && data.get(i).toInt() == 0
-            ) {
-                nalBegin = i + 3
-                break
-            }
-            i--
-        }
-        if (nalBegin < 0) {
-            dvStats.recordLiveDm(DM_WRITER, mediaTimeUs, null)
-            return
-        }
-        var nalEnd = end
-        var j = nalBegin + 2
-        while (j + 2 < end) {
-            if (data.get(j).toInt() == 0 && data.get(j + 1).toInt() == 0 && data.get(j + 2).toInt() == 1) {
-                nalEnd = j
-                break
-            }
-            j++
-        }
-        while (nalEnd > nalBegin && data.get(nalEnd - 1).toInt() == 0) nalEnd-- // next start code's leading zero
-        val length = nalEnd - nalBegin
-        if (length <= 2 || length > 65_536) {
-            dvStats.recordLiveDm(DM_WRITER, mediaTimeUs, null)
-            return
-        }
-        if (dmScratch.size < length) dmScratch = ByteArray(length)
-        val view = data.duplicate()
-        view.position(nalBegin)
-        view.get(dmScratch, 0, length)
-        dvStats.recordLiveDm(DM_WRITER, mediaTimeUs, DoviBridge.getRpuDmInfo(dmScratch, 0, length))
     }
 
     // --- session ---

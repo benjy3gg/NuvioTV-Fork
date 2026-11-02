@@ -11,9 +11,13 @@ internal enum class PlaybackVideoPresentation {
     val supportsSkipCounters: Boolean get() = this == MEDIA_CODEC
 
     companion object {
+        private const val DVFEL_DECODER_PREFIX = "dvfel-sc2:"
+
         fun resolve(hasSelectedVideo: Boolean, configured: Boolean, appliedTunneling: Boolean,
                     decoderName: String?, hasCounters: Boolean): PlaybackVideoPresentation {
             if (!hasSelectedVideo || !configured) return UNCONFIGURED
+            // the Cube 3 FEL renderer reports "dvfel-sc2:" + its MediaCodec decoder name
+            val decoderName = decoderName?.removePrefix(DVFEL_DECODER_PREFIX)
             val mediaCodec = decoderName?.let {
                 it.startsWith("OMX.", ignoreCase = true) || it.startsWith("c2.", ignoreCase = true)
             } == true
