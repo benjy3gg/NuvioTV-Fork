@@ -97,6 +97,20 @@
 
                 <data android:scheme="stremio" />
             </intent-filter>
+            <!-- Play a media URL directly, e.g.
+                 adb shell am start -a android.intent.action.VIEW -t video/* -d https://host/clip.mkv
+                 The video/* type keeps ordinary web links out. -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+
+                <category android:name="android.intent.category.DEFAULT" />
+
+                <data android:scheme="http" />
+                <data android:scheme="https" />
+                <data android:scheme="file" />
+                <data android:scheme="content" />
+                <data android:mimeType="video/*" />
+            </intent-filter>
         </activity>
 
         <activity

@@ -6,6 +6,8 @@ import java.net.URLDecoder
 
 object DeepLinkParser {
     fun parse(url: String): AppDeepLink? {
+        // Direct media first: a local path may hold spaces that java.net.URI rejects.
+        if (url.trim().substringBefore(':', "").lowercase() in DIRECT_MEDIA_SCHEMES) return playLink(url, title = null)
         val parsedUrl = runCatching { URI(url.trim()) }.getOrNull() ?: return null
         val scheme = parsedUrl.scheme?.lowercase().orEmpty()
         if (scheme == "stremio") {
@@ -19,6 +21,11 @@ object DeepLinkParser {
         if (scheme != "nuvio") return null
 
         val host = parsedUrl.host?.lowercase().orEmpty()
+        if (host == "play") {
+            val parameters = queryParameters(parsedUrl)
+            val target = firstParameter(parameters, "url", "uri", "file") ?: return null
+            return playLink(target, firstParameter(parameters, "title", "name"))
+        }
         val pathSegments = parsedUrl.rawPath
             ?.split("/")
             .orEmpty()
@@ -43,6 +50,22 @@ object DeepLinkParser {
                 }
             }
         }
+    }
+
+    /** Schemes that are played directly when they arrive as a VIEW intent's data (the manifest filter only takes video types). */
+    private val DIRECT_MEDIA_SCHEMES = setOf("http", "https", "file", "content")
+
+    /** A bare absolute path becomes a file:// URL; the title defaults to the URL's last path segment. */
+    private fun playLink(target: String, title: String?): AppDeepLink.Play? {
+        val url = target.trim().let { if (it.startsWith("/")) "file://$it" else it }
+        val scheme = url.substringBefore(':', "").lowercase()
+        if (scheme !in DIRECT_MEDIA_SCHEMES) return null
+        val fallbackTitle = url.substringBefore('?').substringBefore('#').trimEnd('/')
+            .substringAfterLast('/')
+            .let { runCatching { decode(it) }.getOrDefault(it) }
+            .takeIf(String::isNotBlank)
+            ?: url
+        return AppDeepLink.Play(url = url, title = title?.takeIf(String::isNotBlank) ?: fallbackTitle)
     }
 
     private fun parseMetaFromParameters(parsedUrl: URI): AppDeepLink.Meta? {

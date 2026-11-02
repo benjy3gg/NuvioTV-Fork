@@ -11,4 +11,10 @@ sealed interface AppDeepLink {
     ) : AppDeepLink
 
     data object ScoutAsk : AppDeepLink
+
+    /** Play a media URL directly (http(s), file or content), e.g. from `adb shell am start`. */
+    data class Play(
+        val url: String,
+        val title: String
+    ) : AppDeepLink
 }

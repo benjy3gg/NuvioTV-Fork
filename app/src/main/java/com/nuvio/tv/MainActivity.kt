@@ -1163,6 +1163,19 @@ open class MainActivity : ComponentActivity() {
                                     launchSingleTop = true
                                 }
                             }
+                            is AppDeepLink.Play -> {
+                                pendingDeepLinkUrl.value = null
+                                Log.i("NuvioDeepLink", "play url=${deepLink.url} title=${deepLink.title}")
+                                navController.navigate(
+                                    Screen.Player.createRoute(
+                                        streamUrl = deepLink.url,
+                                        title = deepLink.title,
+                                        returnToHomeOnBack = true
+                                    )
+                                ) {
+                                    launchSingleTop = true
+                                }
+                            }
                             is AppDeepLink.AddonInstall -> {
                                 navController.navigate(Screen.AddonManager.route) {
                                     launchSingleTop = true

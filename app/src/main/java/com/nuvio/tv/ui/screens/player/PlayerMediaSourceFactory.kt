@@ -373,7 +373,10 @@ internal class PlayerMediaSourceFactory(
         val mp4SessionMode = chunkSessionShape.mp4SessionMode
         val useChunkSessionSource = chunkSessionShape.useChunkSessionSource
         parallelStartupPrefetchUnlocked.set(!useChunkSessionSource)
-        val networkProgressiveFactory: DataSource.Factory = if (useChunkSessionSource) {
+        val networkProgressiveFactory: DataSource.Factory = if (isLocalUrl(url)) {
+            // file:// and content:// (e.g. `am start -d file:///sdcard/clip.mkv`): read directly, no network stack.
+            DefaultDataSource.Factory(context)
+        } else if (useChunkSessionSource) {
             if (mp4SessionMode) {
                 Log.i(
                     "PlayerMediaSourceFactory",
@@ -823,6 +826,11 @@ internal class PlayerMediaSourceFactory(
                 url = cleanUrl,
                 headers = sanitizeHeaders(mergedHeaders)
             )
+        }
+
+        internal fun isLocalUrl(url: String): Boolean {
+            val scheme = url.substringBefore(':', "").lowercase()
+            return scheme == "file" || scheme == "content" || url.startsWith("/")
         }
 
         internal fun isLoopbackUrl(url: String): Boolean {

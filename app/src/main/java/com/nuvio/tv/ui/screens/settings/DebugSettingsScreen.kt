@@ -88,6 +88,21 @@ fun DebugSettingsContent(
                 UiDiagnosticsSettingsRow()
             }
 
+            // ── Playback testing ──
+            item(key = "debug_playback_header") {
+                Spacer(modifier = Modifier.height(NuvioTheme.spacing.sm))
+                Text(
+                    text = stringResource(R.string.debug_section_playback),
+                    style = MaterialTheme.typography.titleSmall,
+                    color = NuvioTheme.colors.TextTertiary,
+                    modifier = Modifier.padding(bottom = NuvioTheme.spacing.xs)
+                )
+            }
+
+            item(key = "debug_play_local_file") {
+                DebugPlayLocalFileCard()
+            }
+
             // ── Popup / Dialog Testing ──
             item(key = "debug_popup_header") {
                 Text(
@@ -362,6 +377,54 @@ private fun DebugToggleCard(
             )
         }
     }
+}
+
+/**
+ * Picks a video with the system document picker and plays it through the app's own
+ * nuvio://play deep link (the same path `adb shell am start` uses). No storage permission
+ * is needed: the picker grants read access to the picked document, kept persistable.
+ */
+@Composable
+private fun DebugPlayLocalFileCard() {
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val pickerMissing = stringResource(R.string.debug_play_file_no_picker)
+    val launcher = androidx.activity.compose.rememberLauncherForActivityResult(
+        androidx.activity.result.contract.ActivityResultContracts.OpenDocument()
+    ) { uri ->
+        if (uri == null) return@rememberLauncherForActivityResult
+        runCatching {
+            context.contentResolver.takePersistableUriPermission(
+                uri, android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION
+            )
+        }
+        val name = runCatching {
+            context.contentResolver.query(
+                uri, arrayOf(android.provider.OpenableColumns.DISPLAY_NAME), null, null, null
+            )?.use { c -> if (c.moveToFirst()) c.getString(0) else null }
+        }.getOrNull()
+        val link = android.net.Uri.Builder()
+            .scheme("nuvio")
+            .authority("play")
+            .appendQueryParameter("url", uri.toString())
+            .apply { if (!name.isNullOrBlank()) appendQueryParameter("title", name) }
+            .build()
+        context.startActivity(
+            android.content.Intent(android.content.Intent.ACTION_VIEW, link)
+                .setPackage(context.packageName)
+                .addFlags(android.content.Intent.FLAG_ACTIVITY_SINGLE_TOP)
+        )
+    }
+    DebugActionCard(
+        title = stringResource(R.string.debug_play_file_title),
+        subtitle = stringResource(R.string.debug_play_file_subtitle),
+        onClick = {
+            try {
+                launcher.launch(arrayOf("video/*"))
+            } catch (e: android.content.ActivityNotFoundException) {
+                android.widget.Toast.makeText(context, pickerMissing, android.widget.Toast.LENGTH_LONG).show()
+            }
+        }
+    )
 }
 
 @Composable
