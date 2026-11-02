@@ -45,6 +45,7 @@ internal class GazelleFelSession {
 
     /** Filters [data] (position..limit) in place and commits [ptsUs]; returns the new length or < 0. */
     fun filterAndCommit(data: ByteBuffer, ptsUs: Long): Int {
+        GazelleFelState.applyEl(handle)
         val n = DvFelPlay.filterInPlace(handle, data, data.position(), data.remaining())
         if (n >= 0) DvFelPlay.commit(handle, toCodecPts(ptsUs))
         return n

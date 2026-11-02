@@ -836,6 +836,8 @@ struct dvfp
   void GetStats(dvfp_stats& s) const;
   int64_t LeadNs() const;
   void SetDemo(int on) { m_demo = on ? 1 : 0; }
+  void SetEl(int on) { m_elOff = on ? 0 : 1; }
+  int ElOn() const { return m_elOff ? 0 : 1; }
 
   int mode{DVFP_MODE_CONVERT};
 
@@ -894,6 +896,11 @@ private:
   uint64_t m_commits{0}, m_lastFlushCommit{0}; // decoder input thread only
   std::atomic<bool> m_stop{false};
   std::atomic<int> m_leadUs{0}; // the kernel holds the frames back by this (DVFEL_IOC_SET_LEAD)
+  // SC2: 1 = base layer only (no hints, no EL pictures to the kernel; the EL
+  // decoder keeps running so that it comes back at once). dvfp_set_el,
+  // debug.dvfp.el_off (1 / 0) overrides it while set.
+  std::atomic<int> m_elOff{0};
+  int m_elOffProp{-2}; // decoder input thread only
   std::atomic<int> m_demo{0};   // dvfp_set_demo (debug.dvfp.demo 1 turns it on too)
 
   // the EL decoder, set up by Start
@@ -1097,7 +1104,17 @@ void dvfp::Commit(int64_t pts)
   if (meta)
     m_lastMeta = meta;
 
-  if (m_sc2 && m_pendingCrcValid)
+  if (m_sc2 && !(m_commits % 30))
+  {
+    // a test switch: applies when the property changes, the API call wins otherwise
+    const int prop = PropInt("debug.dvfp.el_off", -1);
+    if (prop != m_elOffProp && (m_elOffProp = prop) >= 0)
+    {
+      m_elOff = prop ? 1 : 0;
+      LOGI("EL %s (debug.dvfp.el_off)", prop ? "off" : "on");
+    }
+  }
+  if (m_sc2 && m_pendingCrcValid && !m_elOff)
   {
     // the kernel names the frames the display shows by these
     dvfel_sc2_hint hint{};
@@ -1796,7 +1813,9 @@ void dvfp::ElThread()
       {
         // the frame of display time pts takes it (by the CRC of its RPU)
         lock.unlock();
-        if (keep && Sc2Queue(keep, pts))
+        if (keep && m_elOff)
+          AImage_delete(keep);
+        else if (keep && Sc2Queue(keep, pts))
           m_elDecoded++;
         continue;
       }
@@ -2769,6 +2788,20 @@ void dvfp_set_demo(dvfp* h, int on)
 {
   if (h)
     h->SetDemo(on);
+}
+
+void dvfp_set_el(dvfp* h, int on)
+{
+  if (h)
+  {
+    h->SetEl(on);
+    LOGI("EL %s", on ? "on" : "off");
+  }
+}
+
+int dvfp_el_on(const dvfp* h)
+{
+  return h ? h->ElOn() : 0;
 }
 
 } // extern "C"

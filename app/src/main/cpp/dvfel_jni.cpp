@@ -47,6 +47,8 @@ struct Api {
   void (*drop)(dvfp*);
   void (*flush)(dvfp*);
   void (*get_stats)(const dvfp*, dvfp_stats*);
+  // optional (Nuvio's libdvfelplay build)
+  void (*set_el)(dvfp*, int);
 };
 
 Api g{};
@@ -63,6 +65,7 @@ bool Load() {
   const bool ok = SYM(api_version) && SYM(available) && SYM(version) && SYM(module_version) &&
                   SYM(probe) && SYM(open) && SYM(close) && SYM(mode) && SYM(filter) &&
                   SYM(commit) && SYM(drop) && SYM(flush) && SYM(get_stats);
+  SYM(set_el);
 #undef SYM
   if (!ok) {
     LOGW("libdvfelplay.so is missing a dvfp_* symbol");
@@ -174,6 +177,13 @@ JNI_FN(void, nativeDrop)(JNIEnv*, jclass, jlong h) {
 
 JNI_FN(void, nativeFlush)(JNIEnv*, jclass, jlong h) {
   if (Loaded() && h) g.flush(H(h));
+}
+
+// EL on/off during playback; false when this libdvfelplay has no dvfp_set_el.
+JNI_FN(jboolean, nativeSetEl)(JNIEnv*, jclass, jlong h, jboolean on) {
+  if (!Loaded() || !h || !g.set_el) return JNI_FALSE;
+  g.set_el(H(h), on ? 1 : 0);
+  return JNI_TRUE;
 }
 
 JNI_FN(void, nativeClose)(JNIEnv*, jclass, jlong h) {

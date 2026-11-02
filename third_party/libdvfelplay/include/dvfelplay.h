@@ -223,6 +223,14 @@ DVFP_EXPORT int64_t dvfp_present_lead_ns(const dvfp* h);
  */
 DVFP_EXPORT void dvfp_set_demo(dvfp* h, int on);
 
+/*
+ * enhancement layer on (1, default) or off (0) during playback, kernel
+ * composition (SC2/Gazelle) only: off shows the base layer with its RPU
+ * mapping. Takes effect within a few frames. Optional symbols.
+ */
+DVFP_EXPORT void dvfp_set_el(dvfp* h, int on);
+DVFP_EXPORT int dvfp_el_on(const dvfp* h);
+
 #ifdef __cplusplus
 }
 #endif

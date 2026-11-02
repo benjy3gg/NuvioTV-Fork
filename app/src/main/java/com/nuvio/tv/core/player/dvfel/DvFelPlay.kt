@@ -62,6 +62,8 @@ internal object DvFelPlay {
     fun drop(handle: Long) = nativeDrop(handle)
     fun flush(handle: Long) = nativeFlush(handle)
     fun close(handle: Long) = nativeClose(handle)
+    /** Enhancement layer on or off during playback; false when the library can't. */
+    fun setEl(handle: Long, on: Boolean): Boolean = nativeSetEl(handle, on)
 
     /** The [STATS_COUNT] dvfp_stats counters, in declaration order. */
     fun stats(handle: Long): LongArray = LongArray(STATS_COUNT).also { nativeStats(handle, it) }
@@ -78,5 +80,6 @@ internal object DvFelPlay {
     @JvmStatic private external fun nativeDrop(handle: Long)
     @JvmStatic private external fun nativeFlush(handle: Long)
     @JvmStatic private external fun nativeClose(handle: Long)
+    @JvmStatic private external fun nativeSetEl(handle: Long, on: Boolean): Boolean
     @JvmStatic private external fun nativeStats(handle: Long, out: LongArray)
 }
