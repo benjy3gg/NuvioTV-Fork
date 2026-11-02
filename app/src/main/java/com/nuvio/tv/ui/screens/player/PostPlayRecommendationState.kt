@@ -87,7 +87,7 @@ internal fun PlayerUiState.blocksPostPlayRecommendation(): Boolean {
         showSubtitleStylePanel ||
         showSubtitleDelayOverlay ||
         showSubtitleTimingDialog ||
-        showSpeedDialog ||
+        showSpeedDialog || showFelPanel ||
         showMoreDialog
 }
 

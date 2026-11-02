@@ -1570,7 +1570,7 @@ fun PlayerRuntimeController.scheduleHideControls() {
         delay(8000)
         if (_uiState.value.isPlaying && !_uiState.value.showAudioOverlay &&
             !_uiState.value.showSubtitleOverlay && !_uiState.value.showSubtitleStylePanel &&
-            !_uiState.value.showSpeedDialog && !_uiState.value.showMoreDialog &&
+            !_uiState.value.showSpeedDialog && !_uiState.value.showFelPanel && !_uiState.value.showMoreDialog &&
             !_uiState.value.showSubtitleDelayOverlay &&
             !_uiState.value.showSubtitleTimingDialog &&
             !_uiState.value.showEpisodesPanel && !_uiState.value.showChaptersPanel && !_uiState.value.showSourcesPanel &&
@@ -1590,7 +1590,8 @@ internal fun PlayerRuntimeController.showSubtitleDelayOverlay() {
             showSubtitleOverlay = false,
             showSubtitleStylePanel = false,
             showSubtitleTimingDialog = false,
-            showSpeedDialog = false
+            showSpeedDialog = false,
+            showFelPanel = false
         )
     }
     scheduleHideSubtitleDelayOverlay()
@@ -1684,7 +1685,7 @@ internal fun PlayerRuntimeController.schedulePauseOverlay() {
         delay(pauseOverlayDelayMs)
         val s = _uiState.value
         val anyPanelOpen = s.showSubtitleOverlay || s.showSubtitleStylePanel ||
-            s.showSpeedDialog || s.showMoreDialog || s.showEpisodesPanel || s.showChaptersPanel ||
+            s.showSpeedDialog || s.showFelPanel || s.showMoreDialog || s.showEpisodesPanel || s.showChaptersPanel ||
             s.showSourcesPanel || s.showAudioOverlay || s.showStreamInfoOverlay ||
             s.showSubtitleTimingDialog || s.showSubtitleDelayOverlay || s.showPartyPanel
         if (!s.isPlaying && s.pauseOverlayEnabled && s.error == null && !anyPanelOpen) {
@@ -2186,6 +2187,7 @@ fun PlayerRuntimeController.onEvent(
                 it.copy(
                     playbackSpeed = event.speed,
                     showSpeedDialog = false,
+                    showFelPanel = false,
                     showSubtitleTimingDialog = false,
                     showSubtitleDelayOverlay = false
                 )
@@ -2292,6 +2294,7 @@ fun PlayerRuntimeController.onEvent(
             _uiState.update {
                 it.copy(
                     showSpeedDialog = true,
+                    showFelPanel = false,
                     showAudioOverlay = false,
                     showSubtitleOverlay = false,
                     showSubtitleStylePanel = false,
@@ -2301,6 +2304,29 @@ fun PlayerRuntimeController.onEvent(
                     showControls = true
                 )
             }
+        }
+        PlayerEvent.OnShowFelPanel -> {
+            if (!_uiState.value.felDetected) return
+            _uiState.update {
+                it.copy(
+                    showFelPanel = true,
+                    showSpeedDialog = false,
+                    showAudioOverlay = false,
+                    showSubtitleOverlay = false,
+                    showSubtitleStylePanel = false,
+                    showMoreDialog = false,
+                    showSubtitleTimingDialog = false,
+                    showSubtitleDelayOverlay = false,
+                    showControls = true
+                )
+            }
+        }
+        PlayerEvent.OnDismissFelPanel -> {
+            _uiState.update { it.copy(showFelPanel = false) }
+            scheduleHideControls()
+        }
+        is PlayerEvent.OnSetFelEnhancementLayer -> {
+            com.nuvio.tv.core.player.dvfel.GazelleFelControl.setEl(event.on)
         }
         PlayerEvent.OnShowMoreDialog -> {
             _uiState.update {
@@ -2312,6 +2338,7 @@ fun PlayerRuntimeController.onEvent(
                     showSubtitleTimingDialog = false,
                     showSubtitleDelayOverlay = false,
                     showSpeedDialog = false,
+                    showFelPanel = false,
                     showControls = true
                 )
             }
@@ -2381,6 +2408,7 @@ fun PlayerRuntimeController.onEvent(
                     showSubtitleStylePanel = false,
                     showSubtitleTimingDialog = false,
                     showSpeedDialog = false,
+                    showFelPanel = false,
                     showSubtitleDelayOverlay = false,
                     showMoreDialog = false
                 )
@@ -2628,6 +2656,7 @@ fun PlayerRuntimeController.onEvent(
                     showSubtitleOverlay = false,
                     showSubtitleStylePanel = false,
                     showSpeedDialog = false,
+                    showFelPanel = false,
                     showMoreDialog = false,
                     showSubtitleTimingDialog = false,
                     showSubtitleDelayOverlay = false,

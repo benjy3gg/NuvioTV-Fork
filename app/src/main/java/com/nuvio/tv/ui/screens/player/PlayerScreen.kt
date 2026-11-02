@@ -435,6 +435,8 @@ fun PlayerScreen(
             returnToDetailsFromEndPrompt()
         } else if (uiState.error != null) {
             exitPlayerFromError()
+        } else if (isV2 && uiState.showFelPanel) {
+            viewModel.onEvent(PlayerEvent.OnDismissFelPanel)
         } else if (isV2 && uiState.showSpeedDialog) {
             // V2 Speed is Activity-local, so the root key dispatcher sees Back.
             // Original's separate Dialog window continues handling its own Back.
@@ -734,6 +736,7 @@ fun PlayerScreen(
         uiState.showAudioOverlay,
         uiState.showSubtitleOverlay,
         uiState.showSpeedDialog,
+        uiState.showFelPanel,
         (isV2 || uiState.controlLayout != null) && uiState.showStreamInfoOverlay,
         uiState.controlLayout == null,
         if (uiState.controlLayout?.focusOrder(customAvailable)?.isEmpty() == true) customHasTimeline else null,
@@ -748,14 +751,14 @@ fun PlayerScreen(
         if (!uiState.showControls) customFocus.controlsHidden(panelOpen = uiState.showEpisodesPanel || uiState.showChaptersPanel ||
             uiState.showSourcesPanel || uiState.showAudioOverlay || uiState.showSubtitleOverlay ||
             uiState.showSubtitleStylePanel || uiState.showSubtitleDelayOverlay || uiState.showSubtitleTimingDialog ||
-            uiState.showSpeedDialog || uiState.showStreamInfoOverlay || uiState.showPartyPanel)
+            uiState.showSpeedDialog || uiState.showFelPanel || uiState.showStreamInfoOverlay || uiState.showPartyPanel)
         if (shouldConfirmNextEpisodeOnEnd || postPlayRecommendationState.isVisible) return@LaunchedEffect
         if (uiState.error != null) return@LaunchedEffect
         if (uiState.showControls && !uiState.showEpisodesPanel && !uiState.showChaptersPanel && !uiState.showSourcesPanel &&
             !uiState.showAudioOverlay && !uiState.showSubtitleOverlay &&
             !uiState.showSubtitleStylePanel && !uiState.showSubtitleDelayOverlay &&
             !uiState.showSubtitleTimingDialog &&
-            !uiState.showSpeedDialog && !((isV2 || uiState.controlLayout != null) && uiState.showStreamInfoOverlay)
+            !uiState.showSpeedDialog && !uiState.showFelPanel && !((isV2 || uiState.controlLayout != null) && uiState.showStreamInfoOverlay)
         ) {
             // Let the returning control deck attach after the outgoing panel fades.
             val returning = if (isV2 && uiState.controlLayout == null) v2Focus.pendingReturn else null
@@ -883,7 +886,7 @@ fun PlayerScreen(
     val remoteButtonsReady = uiState.error == null &&
         !uiState.showEpisodesPanel && !uiState.showChaptersPanel && !uiState.showSourcesPanel &&
         !uiState.showAudioOverlay && !uiState.showSubtitleOverlay &&
-        !uiState.showSubtitleStylePanel && !uiState.showSpeedDialog &&
+        !uiState.showSubtitleStylePanel && !uiState.showSpeedDialog && !uiState.showFelPanel &&
         !uiState.showSubtitleDelayOverlay && !uiState.showSubtitleTimingDialog &&
         !uiState.showMoreDialog && !uiState.showStreamInfoOverlay && !uiState.showPartyPanel &&
         !shouldConfirmNextEpisodeOnEnd &&
@@ -1285,7 +1288,7 @@ fun PlayerScreen(
                     !uiState.showSubtitleOverlay &&
                     !uiState.showSubtitleStylePanel &&
                     !uiState.showSubtitleTimingDialog &&
-                    !uiState.showSpeedDialog
+                    !uiState.showSpeedDialog && !uiState.showFelPanel
                 ) {
                     viewModel.onEvent(PlayerEvent.OnShowSubtitleOverlay)
                 }
@@ -1405,7 +1408,7 @@ fun PlayerScreen(
                 // When a side panel or dialog is open, let it handle all keys
                 val panelOrDialogOpen = uiState.showEpisodesPanel || uiState.showChaptersPanel || uiState.showSourcesPanel ||
                         uiState.showAudioOverlay || uiState.showSubtitleOverlay ||
-                        uiState.showSubtitleStylePanel || uiState.showSpeedDialog ||
+                        uiState.showSubtitleStylePanel || uiState.showSpeedDialog || uiState.showFelPanel ||
                         uiState.showSubtitleDelayOverlay || uiState.showSubtitleTimingDialog ||
                         uiState.showMoreDialog ||
                         shouldConfirmNextEpisodeOnEnd ||
@@ -1627,7 +1630,7 @@ fun PlayerScreen(
                 !uiState.showSubtitleStylePanel &&
                 !uiState.showSubtitleDelayOverlay &&
                 !uiState.showSubtitleTimingDialog &&
-                !uiState.showSpeedDialog &&
+                !uiState.showSpeedDialog && !uiState.showFelPanel &&
                 !uiState.showMoreDialog
         }
         val seekOverlayVisible = uiState.showSeekOverlay && !uiState.showControls && uiState.error == null &&
@@ -1645,7 +1648,7 @@ fun PlayerScreen(
             !uiState.showSourcesPanel &&
             !uiState.showAudioOverlay &&
             !uiState.showSubtitleOverlay &&
-            !uiState.showSpeedDialog &&
+            !uiState.showSpeedDialog && !uiState.showFelPanel &&
             !postPlayRecommendationState.isVisible &&
             uiState.postPlayMode !is PostPlayMode.StillWatching
         val latestPlayerControlsVisible by rememberUpdatedState(playerControlsVisible)
@@ -2091,7 +2094,7 @@ fun PlayerScreen(
             // Keep the selected HUD mode, but give utility sheets exclusive visual space.
             val v2UtilityVisible = isV2 && (
                 uiState.showAudioOverlay || uiState.showSubtitleOverlay || uiState.showSubtitleStylePanel ||
-                    uiState.showSourcesPanel || uiState.showEpisodesPanel || uiState.showChaptersPanel || uiState.showSpeedDialog ||
+                    uiState.showSourcesPanel || uiState.showEpisodesPanel || uiState.showChaptersPanel || uiState.showSpeedDialog || uiState.showFelPanel ||
                     uiState.showStreamInfoOverlay || uiState.showSubtitleDelayOverlay || uiState.showSubtitleTimingDialog
                 )
             PlaybackStatsOverlay(
@@ -2293,7 +2296,7 @@ fun PlayerScreen(
                 !uiState.showAudioOverlay &&
                 !uiState.showSubtitleOverlay &&
                 !uiState.showSubtitleStylePanel &&
-                !uiState.showSpeedDialog &&
+                !uiState.showSpeedDialog && !uiState.showFelPanel &&
                 !uiState.showMoreDialog &&
                 !uiState.showDisplayModeInfo &&
                 !postPlayRecommendationState.isVisible
@@ -2458,7 +2461,7 @@ fun PlayerScreen(
                     !uiState.showAudioOverlay &&
                     !uiState.showSubtitleOverlay &&
                     !uiState.showSubtitleTimingDialog &&
-                    !uiState.showSpeedDialog,
+                    !uiState.showSpeedDialog && !uiState.showFelPanel,
                 enter = fadeIn(animationSpec = tween(120)),
                 exit = fadeOut(animationSpec = tween(120)),
                 modifier = Modifier
@@ -2743,7 +2746,7 @@ fun PlayerScreen(
                     !uiState.showSubtitleOverlay &&
                     !uiState.showSubtitleStylePanel &&
                     !uiState.showSubtitleDelayOverlay &&
-                    !uiState.showSpeedDialog &&
+                    !uiState.showSpeedDialog && !uiState.showFelPanel &&
                     !uiState.showMoreDialog,
                 onDismiss = { viewModel.onEvent(PlayerEvent.OnDismissSubtitleTimingDialog) },
                 modifier = Modifier
@@ -2766,6 +2769,14 @@ fun PlayerScreen(
                     onCueSelected = { cue ->
                         viewModel.onEvent(PlayerEvent.OnApplySubtitleAutoSyncCue(cue.startTimeMs))
                     }
+                )
+            }
+
+            if (uiState.showFelPanel) {
+                FelPanel(
+                    viewModel = viewModel,
+                    onSetEl = { viewModel.onEvent(PlayerEvent.OnSetFelEnhancementLayer(it)) },
+                    onDismiss = { viewModel.onEvent(PlayerEvent.OnDismissFelPanel) }
                 )
             }
 
@@ -3526,7 +3537,8 @@ private fun PlayerControlsOverlay(
                 aspect = onToggleAspectRatio, engine = requestEngineSwitch, report = onReportPlaybackIssue,
                 more = onToggleMoreActions, external = onOpenInExternalPlayer, info = onShowStreamInfo,
                 stats = onTogglePlaybackStats, interaction = onResetHideTimer, hide = onHideControls,
-                party = { viewModel.onEvent(PlayerEvent.OnShowPartyPanel) }), reportCodeVisible)
+                party = { viewModel.onEvent(PlayerEvent.OnShowPartyPanel) },
+                fel = { viewModel.onEvent(PlayerEvent.OnShowFelPanel) }), reportCodeVisible)
         return
     }
     if (LocalV2Appearance.current != null) {

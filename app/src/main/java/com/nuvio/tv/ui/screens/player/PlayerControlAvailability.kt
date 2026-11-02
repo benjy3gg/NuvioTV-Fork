@@ -22,6 +22,7 @@ internal fun playerControlAvailability(
     if (state.nextEpisode?.hasAired == true && (state.postPlayMode as? PostPlayMode.AutoPlay)?.let {
         !it.searching && it.countdownSec == null
     } != false) add(PlayerControlAction.NEXT_EPISODE)
+    if (state.felDetected) add(PlayerControlAction.FEL)
     if (state.audioTracks.isNotEmpty()) add(PlayerControlAction.AUDIO)
     if (state.subtitleTracks.isNotEmpty() || state.addonSubtitles.isNotEmpty()) add(PlayerControlAction.SUBTITLES)
     if (!state.tunnelingEnabled && !appliedTunneling) add(PlayerControlAction.ASPECT)

@@ -149,6 +149,7 @@ private fun PlayerRuntimeController.showPartySpeedNotice() {
     _uiState.update {
         it.copy(
             showSpeedDialog = false,
+            showFelPanel = false,
             showAspectRatioIndicator = true,
             aspectRatioIndicatorText = context.getString(R.string.party_speed_fixed),
         )

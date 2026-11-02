@@ -54,6 +54,7 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
 import javax.inject.Inject
@@ -216,6 +217,12 @@ class PlayerViewModel @Inject constructor(
                 .map { it.currentStreamInfoHash }
                 .distinctUntilChanged()
                 .collect { thumbnailCopyDebrid.notePlaying(it) }
+        }
+        // The FEL button shows while a native FEL composition runs (Fire TV Cube 3).
+        viewModelScope.launch {
+            com.nuvio.tv.core.player.dvfel.GazelleFelState.running.collect { running ->
+                controller._uiState.update { it.copy(felDetected = running, showFelPanel = it.showFelPanel && running) }
+            }
         }
         viewModelScope.launch(Dispatchers.IO) {
             com.nuvio.tv.core.performance.ArtCompileStatus.logOnce(context, PlayerRuntimeController.TAG)

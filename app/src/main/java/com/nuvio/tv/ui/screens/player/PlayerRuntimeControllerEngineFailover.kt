@@ -110,6 +110,7 @@ internal fun PlayerRuntimeController.switchToInternalPlayerEngine(
             showSubtitleStylePanel = false,
             showSubtitleDelayOverlay = false,
             showSpeedDialog = false,
+            showFelPanel = false,
             showMoreDialog = false,
             chapters = emptyList(),
             showChaptersPanel = false,

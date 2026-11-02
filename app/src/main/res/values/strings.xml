@@ -2237,6 +2237,13 @@
         <item quantity="other">Still loading after %1$d seconds</item>
     </plurals>
     <string name="player_speed_title">Playback speed</string>
+    <string name="player_fel_button">FEL</string>
+    <string name="player_fel_title">Dolby Vision FEL</string>
+    <string name="player_fel_el">Enhancement layer</string>
+    <string name="player_fel_el_on">On · BL + EL composed</string>
+    <string name="player_fel_el_off">Off · base layer only</string>
+    <string name="player_fel_el_unavailable">Not switchable with this libdvfelplay</string>
+    <string name="player_fel_el_no_root">Off needs root: allow Nuvio in Magisk</string>
     <string name="player_more_actions_title">More actions</string>
     <string name="player_more_short">More</string>
     <string name="player_layout_more_fixed">Fixed at far right</string>

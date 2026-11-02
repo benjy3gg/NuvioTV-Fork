@@ -139,6 +139,9 @@ data class PlayerUiState(
     val subtitleAutoSyncLoading: Boolean = false,
     val subtitleAutoSyncLoadedTrackKey: String? = null,
     val showSpeedDialog: Boolean = false,
+    /** A native Dolby Vision FEL composition runs (Fire TV Cube 3): the FEL button shows. */
+    val felDetected: Boolean = false,
+    val showFelPanel: Boolean = false,
     val showMoreDialog: Boolean = false,
     val dimHdrOverlays: Boolean = false,
     val isHdrVideo: Boolean = false,
@@ -400,6 +403,9 @@ sealed class PlayerEvent {
     data class OnAdjustSubtitleDelay(val deltaMs: Int, val showOverlay: Boolean = true) : PlayerEvent()
     data class OnResetSubtitleDelay(val showOverlay: Boolean = true) : PlayerEvent()
     data object OnShowSpeedDialog : PlayerEvent()
+    data object OnShowFelPanel : PlayerEvent()
+    data object OnDismissFelPanel : PlayerEvent()
+    data class OnSetFelEnhancementLayer(val on: Boolean) : PlayerEvent()
     data object OnShowMoreDialog : PlayerEvent()
     data object OnDismissMoreDialog : PlayerEvent()
     data object OnShowEpisodesPanel : PlayerEvent()
