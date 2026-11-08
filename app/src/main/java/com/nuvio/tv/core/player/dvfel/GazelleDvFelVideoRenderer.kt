@@ -126,9 +126,13 @@ internal class GazelleDvFelVideoRenderer(
         val p = DvFelPlay.probe(data) ?: throw fallback("dvfp_probe failed")
         Log.i(TAG, "probe: hasRpu=${p.hasRpu} profile=${p.profile} elType=${p.elType} hasEl=${p.hasEl}")
         if (!p.hasRpu || p.profile != 7) throw fallback("first sample has no P7 RPU")
-        if (p.elType != DvFelPlay.EL_FEL) throw fallback("not FEL (elType=${p.elType}): AUTO path")
+        // Any P7 with an EL runs as a FEL session. The EL type comes from the first sample's RPU only, and a
+        // FEL film has MEL-looking stretches (black frames, fades, titles): a start or resume there must not
+        // drop the film to the AUTO path. A real MEL EL adds nothing, so composing it gives the same picture.
+        if (p.elType == DvFelPlay.EL_NONE && !p.hasEl) throw fallback("no EL (elType=0): AUTO path")
+        if (p.elType != DvFelPlay.EL_FEL) Log.i(TAG, "first sample's RPU says elType=${p.elType}: FEL session anyway")
         // FEL whose first sample carries no NAL 63: the EL was stripped upstream of the renderer.
-        if (!p.hasEl) Log.w(TAG, "FEL RPU but no EL NAL units in the first sample")
+        if (!p.hasEl) Log.w(TAG, "P7 RPU but no EL NAL units in the first sample")
         val f = codecInputFormat ?: throw fallback("no codec input format")
         if (f.width <= 0 || f.height <= 0) throw fallback("unknown BL size ${f.width}x${f.height}")
         if (!session.open(f.width, f.height, DvFelPlay.MODE_FEL, p.elType)) {
