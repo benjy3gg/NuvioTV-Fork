@@ -282,6 +282,9 @@ data class PlayerUiState(
     val isLive: Boolean = false,
     val playerNotice: String? = null
 ) {
+    /** The speed dialog or the FEL panel is open: one read in PlayerScreen, which is near the Android 9 verifier's size limit. */
+    val speedOrFelOpen: Boolean get() = showSpeedDialog || showFelPanel
+
     /** Subtitle style to render with, after applying the HDR override for the current video. */
     val effectiveSubtitleStyle: SubtitleStyleSettings
         get() = subtitleStyle.forVideo(isHdrVideo)
